@@ -16,12 +16,13 @@
 using namespace std;
 
 
-string expr = "3+4*5/6";
+string expr = "(3+2*5 + (80-79)*2*2)*2";
 string expr0 = "(3+2)*(4-2)/(8+7)";
 string expr1 = "9-5+2";
 string expr2 = "(9-5)+2";
-string expr3 = "9-(5+2)";
-string expr4 = "(9-(5+2))*3";
+string expr3 = "(9-(5+2))";
+string expr4 = "(((9-  ((((5+2))))  )))";
+string expr5 = " (9-   ( 20 + 10 ) ) * 2 ";
 
 vector<string> infixExprVec={
     expr,
@@ -30,6 +31,7 @@ vector<string> infixExprVec={
     expr2,
     expr3,
     expr4,
+    expr5,
 };
 
 typedef int (*BiOpdFuns)(int, int);
@@ -57,20 +59,24 @@ inline int divOpd(int a, int b){
     return a / b;
 }
 
-inline bool isDigit(char c){
+inline bool isBlank(const char c){
+    return c == ' ';
+}
+
+inline bool isDigit(const char c){
     return c >= '0' && c <= '9';
 }
 
-inline int charToDigit(char c){
+inline int charToDigit(const char c){
     return c - '0';
 }
 
-inline bool isOperand(char c){
+inline bool isOperand(const char c){
     //For now
     return isDigit(c);
 }
 
-inline bool isOperator(char c){
+inline bool isOperator(const char c){
     return c == '+' || c == '-' || c == '*' || c == '/';
 }
 
@@ -79,68 +85,7 @@ bool isOperator(const BiOpdFunsMap_t& map, const string& s){
 
 }
 
-//vector<string> convertInfixToPostfixExprRecursive(const string& infixExpr){
-//    vector<string> postFixExpr;
-//    
-//    string left;
-//    string right;
-//    string op;
-//
-//    vector<string> rightR;
-//    vector<string> leftV;
-//    
-//    string::const_iterator it = infixExpr.begin();
-//    for (; it != infixExpr.end(); ) {
-//        if (isDigit(*it)) {
-//            left = *it;
-//            op = *(it + 1);
-//            postFixExpr.push_back(left);
-//            
-//            char r = *(it + 2);
-//            if (r == '+' || r == '-') {
-//                right = string(1, r);
-//                postFixExpr.push_back(right);
-//                it += 3;
-//            } else if (r == '*' || r == '/'){
-//                string rL = infixExpr.substr(2, infixExpr.end()-(it+2));
-//                right = rL;
-//                rightR = convertInfixToPostfixExprRecursive( rL );
-//                postFixExpr.insert(postFixExpr.end(), rightR.begin(), rightR.end());
-//                
-//                it++;
-//            } else if ( r == '(') {
-//                it++;
-//            } else if ( r == ')' ) {
-//                it++;
-//            }
-//            
-//            cout <<"L=" << left <<", op=" << op << ", R=" << right << endl;
-//            postFixExpr.push_back(op);
-//            
-//        } else if (isOperator(*it)) {
-//            op = *it;
-//            right = *(it+1);
-//            
-//            postFixExpr.push_back(right);
-//            postFixExpr.push_back(op);
-//            cout << "operator=" << *it << endl;
-//            it += 2;
-//        } else if (*it == '('){
-//            cout << "left parenthnesses=" << *it << endl;
-//            it++;
-//        }
-//
-//    }
-//    
-////    postFixExpr.insert(postFixExpr.end(), leftV.begin(), leftV.end());
-////    postFixExpr.insert(postFixExpr.end(), rightR.begin(), rightR.end());
-////    postFixExpr.push_back(op);
-//    
-//    return postFixExpr;
-//}
-
-
-int GetPriority(char c){
+int GetPriority(const char c){
     if (c == '+' || c == '-') {
         return 10;
     } else if ( c == '*' || c == '/') {
@@ -151,25 +96,67 @@ int GetPriority(char c){
     }
 }
 
-vector<char> convertInfixToPostfixExprStack(const string& infixExpr){
-    vector<char> postFixExpr(512);
-    vector<char> opStack(32);
+int GetPriority(const string& s){
+    if (s.compare("+") == 0 || s.compare("-") == 0) {
+        return 10;
+    } else if ( s.compare("*") == 0 || s.compare("/") == 0) {
+        return 11;
+    } else {
+        assert(false);
+        return 0;
+    }
+}
+
+vector<string> preProcessInfixExpr(const string& infixExpr){
+    vector<string> infixExprVec;
+    string tmp("");
     
-    string::const_iterator it = infixExpr.begin();
+    for_each(infixExpr.begin(), infixExpr.end(), [&](char c){
+        if (isDigit(c)) {
+            tmp.push_back(c);
+        }else{
+            if (tmp.length() != 0) {
+                infixExprVec.push_back(tmp);
+                tmp.clear();
+            }
+            
+            if ( !isBlank(c) ) {
+                //skip any blank
+                infixExprVec.push_back(string(1, c));
+            }
+        }
+    });
+    
+    //push the last operand into stack
+    if (tmp.length() != 0) {
+        infixExprVec.push_back(tmp);
+    }
+    return infixExprVec;
+}
+
+vector<string> convertInfixToPostfixExprStack(const vector<string>& infixExpr){
+    vector<string> postFixExpr(128);
+    vector<string> opStack(32);
+    
+    vector<string>::const_iterator it = infixExpr.begin();
     
     for (; it != infixExpr.end(); it++) {
-        if (*it == '(') {
+        if (it->compare("(") == 0) {
             opStack.push_back(*it);
-        }else if  (*it == ')' ) {
-            postFixExpr.push_back(opStack.back());
-            opStack.pop_back();//pop operator
-            opStack.pop_back();//pop '('
-        }else if (isOperand(*it)) {
-            postFixExpr.push_back(*it);
-        }else if(isOperator(*it)) {
+        }else if (it->compare(")") == 0) {
+            //pop all operator within ()
+            for (auto it=opStack.rbegin(); it->compare("(") != 0; it++) {
+                postFixExpr.push_back(opStack.back());
+                opStack.pop_back();//pop operator
+            }
+            
+            opStack.pop_back();//pop "("
+        }else if (isOperator(BiOpdFunsMap, *it)) {
             if (!opStack.empty()           &&
-                isOperator(opStack.back()) &&
-                GetPriority(opStack.back()) >= GetPriority(*it)) {
+                isOperator(BiOpdFunsMap, opStack.back()) &&
+                GetPriority(opStack.back()) >= GetPriority(*it)
+                ) {
+                //meet an operator, it's priority is great_or_equal to the last one's
                 postFixExpr.push_back(opStack.back());
                 
                 opStack.pop_back();
@@ -177,16 +164,13 @@ vector<char> convertInfixToPostfixExprStack(const string& infixExpr){
             }else {
                 opStack.push_back(*it);
             }
+        }else{
+            //if (isOperand(*it)) {
+            postFixExpr.push_back(*it);
         }
     }
     
     postFixExpr.insert(postFixExpr.end(), opStack.rbegin(), opStack.rend());
-    
-//    for (auto it=postFixExpr.begin(); it != postFixExpr.end(); it++) {
-//        cout << *it << " ";
-//    }
-//    cout << endl;
-
     return postFixExpr;
 }
 
@@ -195,15 +179,15 @@ int calcutorPostfixExpr(const vector<string>& postfixExpr){
     vector<string> opdStack(32); //operand stack
     vector<string> opStack(32);  //operator stack
     
-    for_each(postfixExpr.begin(), postfixExpr.end(), [&](string s){
+    for_each(postfixExpr.begin(), postfixExpr.end(), [&](const string s){
         if (isOperator(BiOpdFunsMap, s)){
-            auto opd1 = opdStack.back();
-            opdStack.pop_back();
             auto opd2 = opdStack.back();
+            opdStack.pop_back();
+            auto opd1 = opdStack.back();
             opdStack.pop_back();
             auto it = BiOpdFunsMap.find(s);
             if (it != BiOpdFunsMap.end()) {
-                auto operand = it->second(atoi(opd2.c_str()), atoi(opd1.c_str()));
+                auto operand = it->second(stoi(opd1), stoi(opd2));
                 //cout << "operand=" << operand << " ";
                 opdStack.push_back(to_string(operand));
                 ret = operand;
@@ -228,27 +212,23 @@ int main(int argc, const char * argv[]) {
     BiOpdFunsMap.insert(make_pair(operatorMult, multOpd));
     BiOpdFunsMap.insert(make_pair(operatorDiv, divOpd));
 
-    for_each(infixExprVec.begin(), infixExprVec.end(), [](string inFixExp){
+    for_each(infixExprVec.begin(), infixExprVec.end(), [](const string& inFixExp){
         for_each(inFixExp.begin(), inFixExp.end(), [](char c){
             cout << c;
         });
         
         cout << " = ";
         
-        auto postfixExpr =convertInfixToPostfixExprStack(inFixExp);
+        auto infixExprString = preProcessInfixExpr(inFixExp);
+        auto postfixExpr =convertInfixToPostfixExprStack(infixExprString);
         
-        for_each(postfixExpr.begin(), postfixExpr.end(), [](char c){
-            cout << c;
+        for_each(postfixExpr.begin(), postfixExpr.end(), [](const string& expr){
+            cout << expr;
         });
 
         //cout << endl;
- 
-        vector<string> postfixExprString;
-        for_each(postfixExpr.begin(), postfixExpr.end(), [&](char c){
-            postfixExprString.push_back(string(1, c));
-        });
         
-        int ret = calcutorPostfixExpr(postfixExprString);
+        int ret = calcutorPostfixExpr(postfixExpr);
         cout << " = " << ret << endl;
     });
     
