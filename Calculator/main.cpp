@@ -15,18 +15,15 @@
 
 using namespace std;
 
-inline int charToDigit(char c){
-    return c - '0';
-}
 
 string expr = "3+4*5/6";
 string expr0 = "(3+2)*(4-2)/(8+7)";
-string expr1 ="9-5+2";
-string expr2 ="(9-5)+2";
-string expr3 ="9-(5+2)";
-string expr4 ="(9-(5+2))*3";
+string expr1 = "9-5+2";
+string expr2 = "(9-5)+2";
+string expr3 = "9-(5+2)";
+string expr4 = "(9-(5+2))*3";
 
-vector<string> infixExpr={
+vector<string> infixExprVec={
     expr,
     expr0,
     expr1,
@@ -34,6 +31,10 @@ vector<string> infixExpr={
     expr3,
     expr4,
 };
+
+typedef int (*BiOpdFuns)(int, int);
+typedef map<const string, BiOpdFuns> BiOpdFunsMap_t;
+BiOpdFunsMap_t BiOpdFunsMap;
 
 const string operatorAdd = "+";
 const string operatorMinus = "-";
@@ -48,7 +49,6 @@ inline int minusOpd(int a, int b){
     return a - b;
 }
 
-
 inline int multOpd(int a, int b){
     return a * b;
 }
@@ -57,11 +57,12 @@ inline int divOpd(int a, int b){
     return a / b;
 }
 
-typedef int (*twoOpdFuns)(int, int);
-map<const string, twoOpdFuns>twoOpdFunsMap;
-
 inline bool isDigit(char c){
     return c >= '0' && c <= '9';
+}
+
+inline int charToDigit(char c){
+    return c - '0';
 }
 
 inline bool isOperand(char c){
@@ -73,88 +74,70 @@ inline bool isOperator(char c){
     return c == '+' || c == '-' || c == '*' || c == '/';
 }
 
-vector<string> convertInfixToPostfixExprRecursive(const string& infixExpr){
-    vector<string> postFixExpr;
-    
-    string left;
-    string right;
-    string op;
+bool isOperator(const BiOpdFunsMap_t& map, const string& s){
+    return map.find(s) != map.end();
 
-    vector<string> rightR;
-    vector<string> leftV;
-    
-    string::const_iterator it = infixExpr.begin();
-    for (; it != infixExpr.end(); ) {
-        if (isDigit(*it)) {
-            left = *it;
-            op = *(it + 1);
-            postFixExpr.push_back(left);
-            
-            char r = *(it + 2);
-            if (r == '+' || r == '-') {
-                right = string(1, r);
-                postFixExpr.push_back(right);
-                it += 3;
-            } else if (r == '*' || r == '/'){
-                string rL = infixExpr.substr(2, infixExpr.end()-(it+2));
-                right = rL;
-                rightR = convertInfixToPostfixExprRecursive( rL );
-                postFixExpr.insert(postFixExpr.end(), rightR.begin(), rightR.end());
-                
-                it++;
-            } else if ( r == '(') {
-                it++;
-            } else if ( r == ')' ) {
-                it++;
-            }
-            
-            cout <<"L=" << left <<", op=" << op << ", R=" << right << endl;
-            postFixExpr.push_back(op);
-            
-        } else if (isOperator(*it)) {
-            op = *it;
-            right = *(it+1);
-            
-            postFixExpr.push_back(right);
-            postFixExpr.push_back(op);
-            cout << "operator=" << *it << endl;
-            it += 2;
-        } else if (*it == '('){
-            cout << "left parenthnesses=" << *it << endl;
-            it++;
-        }
-
-    }
-    
-//    postFixExpr.insert(postFixExpr.end(), leftV.begin(), leftV.end());
-//    postFixExpr.insert(postFixExpr.end(), rightR.begin(), rightR.end());
-//    postFixExpr.push_back(op);
-    
-    return postFixExpr;
 }
 
-
-vector<string> convertInfixToPostfixExpr(const string& infixExpr){
-    vector<string> postFixExpr;
-    
-    string::const_iterator it = infixExpr.begin();
-    string left = string(1 , *it);
-    postFixExpr.push_back(left);
-    
-    map<const string, twoOpdFuns>::iterator mapIt;
-
-    for (; it != infixExpr.end(); it++) {
-        if ((mapIt = twoOpdFunsMap.find(string(1, *it))) != twoOpdFunsMap.end() ) {
-            string right = string(1, *(it+1));
-            string optor = string(1, *it);
-            
-            postFixExpr.push_back(right);
-            postFixExpr.push_back(optor);
-            it++;
-        }
-    }
-    return postFixExpr;
-}
+//vector<string> convertInfixToPostfixExprRecursive(const string& infixExpr){
+//    vector<string> postFixExpr;
+//    
+//    string left;
+//    string right;
+//    string op;
+//
+//    vector<string> rightR;
+//    vector<string> leftV;
+//    
+//    string::const_iterator it = infixExpr.begin();
+//    for (; it != infixExpr.end(); ) {
+//        if (isDigit(*it)) {
+//            left = *it;
+//            op = *(it + 1);
+//            postFixExpr.push_back(left);
+//            
+//            char r = *(it + 2);
+//            if (r == '+' || r == '-') {
+//                right = string(1, r);
+//                postFixExpr.push_back(right);
+//                it += 3;
+//            } else if (r == '*' || r == '/'){
+//                string rL = infixExpr.substr(2, infixExpr.end()-(it+2));
+//                right = rL;
+//                rightR = convertInfixToPostfixExprRecursive( rL );
+//                postFixExpr.insert(postFixExpr.end(), rightR.begin(), rightR.end());
+//                
+//                it++;
+//            } else if ( r == '(') {
+//                it++;
+//            } else if ( r == ')' ) {
+//                it++;
+//            }
+//            
+//            cout <<"L=" << left <<", op=" << op << ", R=" << right << endl;
+//            postFixExpr.push_back(op);
+//            
+//        } else if (isOperator(*it)) {
+//            op = *it;
+//            right = *(it+1);
+//            
+//            postFixExpr.push_back(right);
+//            postFixExpr.push_back(op);
+//            cout << "operator=" << *it << endl;
+//            it += 2;
+//        } else if (*it == '('){
+//            cout << "left parenthnesses=" << *it << endl;
+//            it++;
+//        }
+//
+//    }
+//    
+////    postFixExpr.insert(postFixExpr.end(), leftV.begin(), leftV.end());
+////    postFixExpr.insert(postFixExpr.end(), rightR.begin(), rightR.end());
+////    postFixExpr.push_back(op);
+//    
+//    return postFixExpr;
+//}
 
 
 int GetPriority(char c){
@@ -195,11 +178,6 @@ vector<char> convertInfixToPostfixExprStack(const string& infixExpr){
                 opStack.push_back(*it);
             }
         }
-        
-//        for (auto opit=opStack.begin(); opit != opStack.end(); opit++) {
-//            cout << *opit << " ";
-//        }
-//        cout << endl;
     }
     
     postFixExpr.insert(postFixExpr.end(), opStack.rbegin(), opStack.rend());
@@ -212,51 +190,66 @@ vector<char> convertInfixToPostfixExprStack(const string& infixExpr){
     return postFixExpr;
 }
 
-int calcutorPostfixExpr(vector<string> postfixExpr){
+int calcutorPostfixExpr(const vector<string>& postfixExpr){
     int ret = 0;
-    vector<string>::iterator it = postfixExpr.begin();
-
-    if (postfixExpr.size() == 1) {
-        return atoi(postfixExpr.begin()->c_str());
-    }
+    vector<string> opdStack(32); //operand stack
+    vector<string> opStack(32);  //operator stack
     
-    map<const string, twoOpdFuns>::iterator mapIt;
-    for ( ; it != postfixExpr.end(); it++) {
-        if ((mapIt = twoOpdFunsMap.find(*it)) != twoOpdFunsMap.end()) {
-            break;
+    for_each(postfixExpr.begin(), postfixExpr.end(), [&](string s){
+        if (isOperator(BiOpdFunsMap, s)){
+            auto opd1 = opdStack.back();
+            opdStack.pop_back();
+            auto opd2 = opdStack.back();
+            opdStack.pop_back();
+            auto it = BiOpdFunsMap.find(s);
+            if (it != BiOpdFunsMap.end()) {
+                auto operand = it->second(atoi(opd2.c_str()), atoi(opd1.c_str()));
+                //cout << "operand=" << operand << " ";
+                opdStack.push_back(to_string(operand));
+                ret = operand;
+            } else {
+                //should not happen
+                assert(false);
+            }
+        }else{
+            //s is operand
+            opdStack.push_back(s);
         }
-    }
-    
-    assert(mapIt != twoOpdFunsMap.end());
-    
-    ret = mapIt->second(atoi((it-2)->c_str()), atoi((it-1)->c_str()));
-    
-    cout << *(it-2) << *it << *(it-1) << " = " << ret << endl;
+    });
 
-    it++;
-    postfixExpr.erase(it-3, it-1);
-    postfixExpr[0] = to_string(ret);
-
-    return calcutorPostfixExpr(postfixExpr);
+    return ret;
 }
 
 
 
 int main(int argc, const char * argv[]) {
-    twoOpdFunsMap.insert(make_pair(operatorAdd, addOpd));
-    twoOpdFunsMap.insert(make_pair(operatorMinus, minusOpd));
-    twoOpdFunsMap.insert(make_pair(operatorMult, multOpd));
-    twoOpdFunsMap.insert(make_pair(operatorDiv, divOpd));
+    BiOpdFunsMap.insert(make_pair(operatorAdd, addOpd));
+    BiOpdFunsMap.insert(make_pair(operatorMinus, minusOpd));
+    BiOpdFunsMap.insert(make_pair(operatorMult, multOpd));
+    BiOpdFunsMap.insert(make_pair(operatorDiv, divOpd));
 
-    for_each(infixExpr.begin(), infixExpr.end(), [](string inFixExp){
-        auto postfixExpr =convertInfixToPostfixExprStack(inFixExp);
-        for (auto it=postfixExpr.begin(); it != postfixExpr.end(); it++) {
-            cout << *it;
-        }
-        cout << endl;
+    for_each(infixExprVec.begin(), infixExprVec.end(), [](string inFixExp){
+        for_each(inFixExp.begin(), inFixExp.end(), [](char c){
+            cout << c;
+        });
         
-//        int result = calcutorPostfixExpr(postfixExpr);
-//        cout << "result = " << result << endl;
+        cout << " = ";
+        
+        auto postfixExpr =convertInfixToPostfixExprStack(inFixExp);
+        
+        for_each(postfixExpr.begin(), postfixExpr.end(), [](char c){
+            cout << c;
+        });
+
+        //cout << endl;
+ 
+        vector<string> postfixExprString;
+        for_each(postfixExpr.begin(), postfixExpr.end(), [&](char c){
+            postfixExprString.push_back(string(1, c));
+        });
+        
+        int ret = calcutorPostfixExpr(postfixExprString);
+        cout << " = " << ret << endl;
     });
     
     return 0;
